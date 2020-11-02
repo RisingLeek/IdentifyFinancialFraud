@@ -192,7 +192,7 @@ print('\n') # 输出各个模型及其得分
 #       recall_score(y_test, res), precision_score(y_test, res), 0.7*recall_score(y_test, res)+0.3*precision_score(y_test, res)))
 
 # 随机森林模型 网格搜索调整参数
-RFC = RandomForestClassifier()
+RFC = RandomForestClassifier(class_weight='balanced')
 RFC_param = {"n_estimators": range(1,101,10), "max_features": range(1,8,1)}
 # 根据f1分值选出最好参数
 GS = GridSearchCV(RFC, RFC_param, cv = 10, scoring='f1', n_jobs = -1, verbose = 1)
@@ -201,7 +201,7 @@ GS.fit(x_train, y_train)
 print(GS.best_params_)
 
 # 输入优化过的参数进行拟合
-RFC = RandomForestClassifier(max_features = GS.best_params_['max_features'], n_estimators = GS.best_params_['n_estimators'])
+RFC = RandomForestClassifier(max_features = GS.best_params_['max_features'], n_estimators = GS.best_params_['n_estimators'], class_weight='balanced')
 RFC = RFC.fit(x_train, y_train)
 res_RFC = pd.DataFrame(RFC.predict(x_test))
 
@@ -226,25 +226,79 @@ res_GBC = pd.DataFrame(GBC.predict(x_test))
 print('网格搜索调整后的梯度提升树模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(GBC, x_test, y_test, cv = 10).mean(),\
       recall_score(y_test, res_GBC), precision_score(y_test, res_GBC), 0.7*recall_score(y_test, res_GBC)+0.3*precision_score(y_test, res_GBC)))
 
-# # 向量机模型 网格搜索调整参数
-# SVR = SVC()
-# SVR_param = {'kernel':('rbf','linear'),'C':[1,5,10]}
-# GS = GridSearchCV(SVR, SVR_param)
-# GS = GS.fit(x_train, y_train)
+# 向量机模型 网格搜索调整参数
+SVR = SVC(class_weight='balanced')
+SVR_param = {'kernel':('rbf','linear'),'C':[1,5,10]}
+GS = GridSearchCV(SVR, SVR_param, scoring='f1')
+GS = GS.fit(x_train, y_train)
 
-# print(GS.best_params_)
+print(GS.best_params_)
 
-# SVR = SVC(kernel = 'linear', C = 10)
-# SVR = SVR.fit(x_train, y_train)
-# res = pd.DataFrame(SVR.predict(x_test))
+SVR = SVC(kernel = GS.best_params_['kernel'], C = GS.best_params_['c'], class_weight='balanced')
+SVR = SVR.fit(x_train, y_train)
+res_SVR = pd.DataFrame(SVR.predict(x_test))
 
-# print('网格搜索调整后的向量机模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(SVC, x_test, y_test, cv = 10).mean(),\
-#       recall_score(y_test, res), precision_score(y_test, res), 0.7*recall_score(y_test, res)+0.3*precision_score(y_test, res)))
+print('网格搜索调整后的向量机模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(SVC, x_test, y_test, cv = 10).mean(),\
+      recall_score(y_test, res_SVR), precision_score(y_test, res_SVR), 0.7*recall_score(y_test, res_SVR)+0.3*precision_score(y_test, res_SVR)))
 
-# from sklearn.metrics import confusion_matrix
-# print('GBC的混淆矩阵为：\n',confusion_matrix(y_test,res_GBC, labels = [1, 0]))
-# print('随机森林的混淆矩阵为：\n',confusion_matrix(y_test,res_RFC, labels = [1, 0]))#绘制混淆矩阵
+# Logistics回归 网格搜索调整参数
+LOR = LogisticRegression(class_weight='balanced')
+LOR_param = {'penalty': ('l1', 'l2'),'C': (0.01, 0.1, 1, 10, 100, 1000)}
+GS = GridSearchCV(LOR, LOR_param, verbose=0, scoring='f1', cv=5)
+GS = GS.fit(x_train, y_train)
+
+print(GS.best_params_)
+
+LOR = LogisticRegression(penalty=GS.best_params_['penalty'], C=GS.best_params_['c'], class_weight='balanced')
+LOR = LOR.fit(x_train, y_train)
+res_LOR = pd.DataFrame(LOR.predict(x_test))
+
+print('网格搜索调整后的Logistic模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(LOR, x_test, y_test, cv = 10).mean(),\
+      recall_score(y_test, res_LOR), precision_score(y_test, res_LOR), 0.7*recall_score(y_test, res_LOR)+0.3*precision_score(y_test, res_LOR)))
+
+from sklearn.metrics import confusion_matrix #绘制混淆矩阵
+print('梯度提升树的混淆矩阵为：\n',confusion_matrix(y_test,res_GBC, labels = [1, 0]))
+print('随机森林的混淆矩阵为：\n',confusion_matrix(y_test,res_RFC, labels = [1, 0]))
+print('向量机的混淆矩阵为：\n',confusion_matrix(y_test,res_SVR, labels = [1, 0]))
+print('Logististcs回归的混淆矩阵为：\n',confusion_matrix(y_test,res_LOR, labels = [1, 0]))
 
 import joblib
 # 导出训练好的模型
 joblib.dump(RFC,  "../PythonModel/RFC.pkl")
+joblib.dump(GBC,  "../PythonModel/GBC.pkl")
+joblib.dump(SVR,  "../PythonModel/SVR.pkl")
+joblib.dump(LOR,  "../PythonModel/LOR.pkl")
+
+# 模型融合
+from mlxtend.classifier import StackingClassifier # 导入stacking包
+
+# 使用前面分类器产生的特征输出作为最后总的meta-classifier的输入数据
+SCLF1 =StackingClassifier(classifiers=[RFC, GBC, SVR, LOR], 
+                            meta_classifier=LogisticRegression())
+                
+# 使用第一层基本分类器产生的类别概率值作为meta-classfier的输入
+SCLF2 =StackingClassifier(classifiers=[RFC, GBC, SVR, LOR],
+                            use_probas=True,
+                            average_probas=False, 
+                            meta_classifier=LogisticRegression())
+
+# 评估
+result1=cross_val_score(SCLF1, x_train, y_train, scoring = 'f1', cv=kfold, n_jobs=-1)
+result2=cross_val_score(SCLF2, x_train, y_train, scoring = 'f1', cv=kfold, n_jobs=-1)
+
+if (result1.mean() >= result2.mean()):
+    SCLF1.fit(x_train, y_train)
+    res_SCLF = pd.DataFrame(LOR.predict(x_test))
+    print('四个融合后的模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(SVC, x_test, y_test, cv = 10).mean(),\
+          recall_score(y_test, res_SCLF), precision_score(y_test, res_SCLF), 0.7*recall_score(y_test, res_SCLF)+0.3*precision_score(y_test, res_SCLF)))
+    print('四个融合后的混淆矩阵为：\n',confusion_matrix(y_test,res_SCLF, labels = [1, 0]))
+    # 导出训练好的模型
+    joblib.dump(SCLF1,  "../PythonModel/SCLF.pkl")
+else:
+    SCLF2.fit(x_train, y_train)
+    res_SCLF = pd.DataFrame(LOR.predict(x_test))
+    print('四个融合后的模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(SVC, x_test, y_test, cv = 10).mean(),\
+          recall_score(y_test, res_SCLF), precision_score(y_test, res_SCLF), 0.7*recall_score(y_test, res_SCLF)+0.3*precision_score(y_test, res_SCLF)))
+    print('四个融合后的混淆矩阵为：\n',confusion_matrix(y_test,res_SCLF, labels = [1, 0]))
+    # 导出训练好的模型
+    joblib.dump(SCLF2,  "../PythonModel/SCLF.pkl")
