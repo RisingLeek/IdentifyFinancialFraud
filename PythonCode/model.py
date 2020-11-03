@@ -177,7 +177,7 @@ print('\n') # 输出各个模型及其得分
 #             # ,'min_impurity_decrease':np.linspace(0,0.5,20)
 #              }
 # CLF = DecisionTreeClassifier(random_state = 25)
-# GS = GridSearchCV(CLF, parameters, cv = 10)
+# GS = GridSearchCV(CLF, parameters, cv = 10, n_jobs=-1)
 # GS.fit(x_train, y_train)
 
 # print(GS.best_params_)
@@ -228,13 +228,13 @@ print('网格搜索调整后的梯度提升树模型:\n最好的准确度{}\n召
 
 # 向量机模型 网格搜索调整参数
 SVR = SVC(class_weight='balanced')
-SVR_param = {'kernel':('rbf','linear'),'C':[1,5,10]}
-GS = GridSearchCV(SVR, SVR_param, scoring='f1')
+SVR_param = {'kernel':('rbf','linear'),'C':[0.1,0.5,1.0]}
+GS = GridSearchCV(SVR, SVR_param, scoring='f1', n_jobs=-1)
 GS = GS.fit(x_train, y_train)
 
 print(GS.best_params_)
 
-SVR = SVC(kernel = GS.best_params_['kernel'], C = GS.best_params_['c'], class_weight='balanced')
+SVR = SVC(kernel = GS.best_params_['kernel'], C = GS.best_params_['C'], class_weight='balanced')
 SVR = SVR.fit(x_train, y_train)
 res_SVR = pd.DataFrame(SVR.predict(x_test))
 
@@ -244,7 +244,7 @@ print('网格搜索调整后的向量机模型:\n最好的准确度{}\n召回率
 # Logistics回归 网格搜索调整参数
 LOR = LogisticRegression(class_weight='balanced')
 LOR_param = {'penalty': ('l1', 'l2'),'C': (0.01, 0.1, 1, 10, 100, 1000)}
-GS = GridSearchCV(LOR, LOR_param, verbose=0, scoring='f1', cv=5)
+GS = GridSearchCV(LOR, LOR_param, verbose=0, scoring='f1', cv=5, n_jobs=-1)
 GS = GS.fit(x_train, y_train)
 
 print(GS.best_params_)
