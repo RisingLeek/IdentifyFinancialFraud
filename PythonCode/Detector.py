@@ -8,10 +8,36 @@ from sklearn.svm import SVC # 导入向量机模型包
 from sklearn.linear_model import LogisticRegression # 导入logistics模型包
 from mlxtend.classifier import StackingClassifier # 导入stacking包
 import tkinter as tk
-from tkinter import filedialog # 用于选择文件路径
 
+def load_file(root, file_path):
+    # 获取文件路径
+    from tkinter import filedialog
+    file_path = tk.filedialog.askopenfilename()
+    return
+
+# 软件窗口大小
+sWidth = 480
+sHeight = 360
+
+# 初始化窗口
 root = tk.Tk()
-root.withdraw()
+root.title('财务造假识别')
+
+# 窗口居中
+screen_w = root.winfo_screenwidth()
+screen_h = root.winfo_screenheight()
+alignstr = '%dx%d+%d+%d' % (sWidth, sHeight, (screen_w-sWidth)/2, (screen_h-sHeight)/2)
+root.geometry(alignstr)
+
+file_path1 = ' '
+file_path2 = ' '
+file_path3 = ' '
+
+load_button_1 = tk.Button(root, text='浏览', command=lambda: load_file(root, file_path1), width=8, height=2)
+load_button_1.grid(row=0, column=0, sticky=tk.W, padx=5,pady=5)
+
+
+root.mainloop()
 
 def load_learn_model():
 
