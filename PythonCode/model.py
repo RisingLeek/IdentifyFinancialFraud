@@ -100,7 +100,7 @@ models=[SVC(),
     LinearDiscriminantAnalysis()]
 results=[]
 for model in models:
-    result=cross_val_score(model, x_train, y_train, scoring = 'f1', cv=kfold, n_jobs=-1)#用F1得分作为参考、k折划分数据集
+    result=cross_val_score(model, feature_line, illegal_line, scoring = 'f1', cv=kfold, n_jobs=-1)#用F1得分作为参考、k折划分数据集
     results.append(result)
 
 # 把模型得分和模型名称放同一个dataframe里面
@@ -196,16 +196,17 @@ RFC = RandomForestClassifier(class_weight='balanced')
 RFC_param = {"n_estimators": range(1,101,10), "max_features": range(1,8,1)}
 # 根据f1分值选出最好参数
 GS = GridSearchCV(RFC, RFC_param, cv = 10, scoring='f1', n_jobs = -1, verbose = 1)
-GS.fit(x_train, y_train)
+GS.fit(feature_line, illegal_line)
 
 print(GS.best_params_)
 
 # 输入优化过的参数进行拟合
 RFC = RandomForestClassifier(max_features = GS.best_params_['max_features'], n_estimators = GS.best_params_['n_estimators'], class_weight='balanced')
+RFC_acc = cross_val_score(RFC, feature_line, illegal_line, cv = 10, n_jobs=-1).mean()
 RFC = RFC.fit(x_train, y_train)
 res_RFC = pd.DataFrame(RFC.predict(x_test))
 
-print('网格搜索调整后的随机森林模型:\n最好的准确度为{}\n召回率为{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(RFC, x_test, y_test, cv = 10).mean(),\
+print('网格搜索调整后的随机森林模型:\n最好的准确度为{}\n召回率为{}\n精确度为{}\nf1_score为{}\n'.format(RFC_acc,\
       recall_score(y_test, res_RFC), precision_score(y_test, res_RFC), 0.7*recall_score(y_test, res_RFC)+0.3*precision_score(y_test, res_RFC)))
 
 # 梯度提升树模型 网格搜索调整参数
@@ -213,47 +214,50 @@ GBC = GradientBoostingClassifier()
 GBC_param = {'loss': ['deviance'], 'n_estimators': [100,180,260], 'learning_rate': [0.1,0.05,0.01], 'max_depth': [5,8,10], 'min_samples_leaf': [75,100,125,150]}
 # 根据f1分值选出最好参数
 GS = GridSearchCV(GBC, GBC_param, cv=kfold, scoring='f1', n_jobs=-1, verbose=1)
-GS.fit(x_train, y_train)
+GS.fit(feature_line, illegal_line)
 
 print(GS.best_params_)
 
 # 输入优化过的参数进行拟合
 GBC = GradientBoostingClassifier(learning_rate = GS.best_params_['learning_rate'], loss = GS.best_params_['loss'], max_depth = GS.best_params_['max_depth'],\
  min_samples_leaf = GS.best_params_['min_samples_leaf'], n_estimators = GS.best_params_['n_estimators'])
+GBC_acc = cross_val_score(GBC, feature_line, illegal_line, cv = 10, n_jobs=-1).mean()
 GBC = GBC.fit(x_train, y_train)
 res_GBC = pd.DataFrame(GBC.predict(x_test))
 
-print('网格搜索调整后的梯度提升树模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(GBC, x_test, y_test, cv = 10).mean(),\
+print('网格搜索调整后的梯度提升树模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(GBC_acc,\
       recall_score(y_test, res_GBC), precision_score(y_test, res_GBC), 0.7*recall_score(y_test, res_GBC)+0.3*precision_score(y_test, res_GBC)))
 
 # 向量机模型 网格搜索调整参数
 SVR = SVC(class_weight='balanced')
 SVR_param = {'kernel':('rbf','linear'),'C':[0.1,0.5,1.0]}
 GS = GridSearchCV(SVR, SVR_param, scoring='f1', n_jobs=-1)
-GS = GS.fit(x_train, y_train)
+GS = GS.fit(feature_line, illegal_line)
 
 print(GS.best_params_)
 
 SVR = SVC(kernel = GS.best_params_['kernel'], C = GS.best_params_['C'], class_weight='balanced')
+SVR_acc = cross_val_score(SVC, feature_line, illegal_line, cv = 10, n_jobs=-1).mean()
 SVR = SVR.fit(x_train, y_train)
 res_SVR = pd.DataFrame(SVR.predict(x_test))
 
-print('网格搜索调整后的向量机模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(SVC, x_test, y_test, cv = 10).mean(),\
+print('网格搜索调整后的向量机模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(SVR_acc,\
       recall_score(y_test, res_SVR), precision_score(y_test, res_SVR), 0.7*recall_score(y_test, res_SVR)+0.3*precision_score(y_test, res_SVR)))
 
 # Logistics回归 网格搜索调整参数
 LOR = LogisticRegression(class_weight='balanced')
 LOR_param = {'penalty': ('l1', 'l2'),'C': (0.01, 0.1, 1, 10, 100, 1000)}
 GS = GridSearchCV(LOR, LOR_param, verbose=0, scoring='f1', cv=5, n_jobs=-1)
-GS = GS.fit(x_train, y_train)
+GS = GS.fit(feature_line, illegal_line)
 
 print(GS.best_params_)
 
 LOR = LogisticRegression(penalty=GS.best_params_['penalty'], C=GS.best_params_['c'], class_weight='balanced')
+LOR_acc = cross_val_score(LOR, feature_line, illegal_line, cv = 10, n_jobs=-1).mean()
 LOR = LOR.fit(x_train, y_train)
 res_LOR = pd.DataFrame(LOR.predict(x_test))
 
-print('网格搜索调整后的Logistic模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(LOR, x_test, y_test, cv = 10).mean(),\
+print('网格搜索调整后的Logistic模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(LOR_acc,\
       recall_score(y_test, res_LOR), precision_score(y_test, res_LOR), 0.7*recall_score(y_test, res_LOR)+0.3*precision_score(y_test, res_LOR)))
 
 from sklearn.metrics import confusion_matrix #绘制混淆矩阵
@@ -287,17 +291,19 @@ result1=cross_val_score(SCLF1, x_train, y_train, scoring = 'f1', cv=kfold, n_job
 result2=cross_val_score(SCLF2, x_train, y_train, scoring = 'f1', cv=kfold, n_jobs=-1)
 
 if (result1.mean() >= result2.mean()):
+    SCLF1_acc = cross_val_score(SCLF1, feature_line, illegal_line, cv = 10, n_jobs=-1).mean()
     SCLF1.fit(x_train, y_train)
     res_SCLF = pd.DataFrame(LOR.predict(x_test))
-    print('四个融合后的模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(SVC, x_test, y_test, cv = 10).mean(),\
+    print('四个融合后的模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(SCLF1_acc,\
           recall_score(y_test, res_SCLF), precision_score(y_test, res_SCLF), 0.7*recall_score(y_test, res_SCLF)+0.3*precision_score(y_test, res_SCLF)))
     print('四个融合后的混淆矩阵为：\n',confusion_matrix(y_test,res_SCLF, labels = [1, 0]))
     # 导出训练好的模型
     joblib.dump(SCLF1,  "../PythonModel/SCLF.pkl")
 else:
+    SCLF2_acc = cross_val_score(SCLF2, feature_line, illegal_line, cv = 10, n_jobs=-1).mean()
     SCLF2.fit(x_train, y_train)
     res_SCLF = pd.DataFrame(LOR.predict(x_test))
-    print('四个融合后的模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(cross_val_score(SVC, x_test, y_test, cv = 10).mean(),\
+    print('四个融合后的模型:\n最好的准确度{}\n召回率{}\n精确度为{}\nf1_score为{}\n'.format(SCLF2_acc,\
           recall_score(y_test, res_SCLF), precision_score(y_test, res_SCLF), 0.7*recall_score(y_test, res_SCLF)+0.3*precision_score(y_test, res_SCLF)))
     print('四个融合后的混淆矩阵为：\n',confusion_matrix(y_test,res_SCLF, labels = [1, 0]))
     # 导出训练好的模型
