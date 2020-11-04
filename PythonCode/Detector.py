@@ -22,7 +22,7 @@ def load_file(entry):
     # 获取文件路径
     global file_path
     from tkinter import filedialog
-    entry.delete(1, 'end')
+    entry.delete(0, 'end')
     file_path = tk.filedialog.askopenfilename()
     entry.insert(10, file_path)
 
@@ -116,7 +116,7 @@ def test(root, entry):
     root_tmp.geometry(alignstr)
     Label(root_tmp, text='预测成功！', fg='red', width=20, height=6, font=(6)).grid(row=0)
     tk.Button(root_tmp, text='确定', width=3, height=1, command=root_tmp.destroy, font=(6)).grid(row=1, padx=3, pady=3)
-    entry.delete(1, 'end')
+    entry.delete(0, 'end')
     if (res == 1 and model_type_selected != 0):
         result = '此份财务数据涉嫌造假，概率为' + str(int(res_pro[0][0]*100)) + '%'
     elif (res == 0 and model_type_selected != 0):
