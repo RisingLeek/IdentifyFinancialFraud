@@ -135,7 +135,7 @@ def UI():
 
     # 初始化窗口
     root = tk.Tk()
-    root.title('财务造假识别 V1.0')
+    root.title('财务造假识别 V1.001')
 
     # 窗口居中
     screen_w = root.winfo_screenwidth()
